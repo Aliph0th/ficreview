@@ -3,6 +3,8 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { SequelizeModule } from '@nestjs/sequelize';
 import * as dotenv from 'dotenv';
 import { sequelizeConfig } from './config';
+import { UserModule } from '../modules/user/user.module';
+import { AuthModule } from '../modules/auth/auth.module';
 
 dotenv.config();
 
@@ -16,7 +18,9 @@ dotenv.config();
       SequelizeModule.forRootAsync({
          inject: [ConfigService],
          useFactory: sequelizeConfig
-      })
+      }),
+      UserModule,
+      AuthModule
    ]
 })
 export class CoreModule {}
