@@ -5,6 +5,7 @@ import {
    BelongsTo,
    Column,
    DataType,
+   HasMany,
    ForeignKey,
    Model,
    PrimaryKey,
@@ -12,6 +13,7 @@ import {
 } from 'sequelize-typescript';
 
 import { Fanfic } from './Fanfic.model';
+import { Comment } from './Comment.model';
 
 @Table
 export class Chapter extends Model<InferAttributes<Chapter>, InferCreationAttributes<Chapter>> {
@@ -38,4 +40,11 @@ export class Chapter extends Model<InferAttributes<Chapter>, InferCreationAttrib
 
    @BelongsTo(() => Fanfic, { onDelete: 'CASCADE' })
    fanfic: Fanfic;
+
+   @HasMany(() => Comment, {
+      foreignKey: 'commentableID',
+      constraints: false,
+      scope: { commentableType: 'chapter' }
+   })
+   comments: Comment[];
 }

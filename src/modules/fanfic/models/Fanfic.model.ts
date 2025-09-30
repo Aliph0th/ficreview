@@ -16,6 +16,7 @@ import {
 
 import { User } from '../../user/models/User.model';
 import { Chapter } from './Chapter.model';
+import { Comment } from './Comment.model';
 
 @Table
 export class Fanfic extends Model<InferAttributes<Fanfic>, InferCreationAttributes<Fanfic>> {
@@ -57,8 +58,15 @@ export class Fanfic extends Model<InferAttributes<Fanfic>, InferCreationAttribut
    declare coverPath: string | null;
 
    @BelongsTo(() => User, { onDelete: 'CASCADE' })
-   user: User;
+   author: User;
 
    @HasMany(() => Chapter)
    chapters: Chapter[];
+
+   @HasMany(() => Comment, {
+      foreignKey: 'commentableID',
+      constraints: false,
+      scope: { commentableType: 'fanfic' }
+   })
+   comments: Comment[];
 }
