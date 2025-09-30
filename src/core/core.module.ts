@@ -1,5 +1,7 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { SequelizeModule } from '@nestjs/sequelize';
+import { sequelizeConfig } from './config';
 
 @Module({
    imports: [
@@ -7,6 +9,10 @@ import { ConfigModule } from '@nestjs/config';
          cache: true,
          isGlobal: true,
          ignoreEnvFile: process.env.NODE_ENV === 'production'
+      }),
+      SequelizeModule.forRootAsync({
+         inject: [ConfigService],
+         useFactory: sequelizeConfig
       })
    ]
 })
