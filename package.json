@@ -26,6 +26,7 @@
       "@nestjs/mapped-types": "*",
       "@nestjs/platform-express": "^11.0.1",
       "@nestjs/sequelize": "^11.0.0",
+      "dotenv": "^17.2.3",
       "helmet": "^8.1.0",
       "jsonwebtoken": "^9.0.2",
       "nest-winston": "^1.10.2",

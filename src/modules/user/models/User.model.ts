@@ -1,18 +1,20 @@
 import { type CreationOptional, InferAttributes, InferCreationAttributes } from 'sequelize';
 import {
-   Column,
-   Model,
-   Table,
-   PrimaryKey,
+   AllowNull,
    AutoIncrement,
+   Column,
    DataType,
-   Unique,
-   NotNull,
    Default,
+   HasMany,
    IsEmail,
-   Length
+   Length,
+   Model,
+   PrimaryKey,
+   Table,
+   Unique
 } from 'sequelize-typescript';
 import { Role } from '../../../common/constants';
+import { Fanfic } from '../../fanfic/models/Fanfic.model';
 
 @Table
 export class User extends Model<InferAttributes<User>, InferCreationAttributes<User>> {
@@ -22,25 +24,28 @@ export class User extends Model<InferAttributes<User>, InferCreationAttributes<U
    declare id: CreationOptional<number>;
 
    @Unique
-   @NotNull
+   @AllowNull(false)
    @IsEmail
    @Column(DataType.STRING)
    declare email: string;
 
-   @NotNull
+   @AllowNull(false)
    @Length({ min: 4, max: 25 })
    @Column(DataType.STRING)
    declare username: string;
 
-   @NotNull
+   @AllowNull(false)
    @Column(DataType.STRING)
    declare password: string;
 
-   @NotNull
+   @AllowNull(false)
    @Default(Role.USER)
    @Column(DataType.ENUM(...Object.values(Role)))
    declare role: Role;
 
-   @Column(DataType.STRING)
+   @Column({ field: 'avatar_path', type: DataType.STRING })
    declare avatarPath: string | null;
+
+   @HasMany(() => Fanfic)
+   fanfics: Fanfic[];
 }
