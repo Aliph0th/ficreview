@@ -5,7 +5,10 @@ export enum TokenType {
 
 export const TOKEN_TTL = {
    [TokenType.EMAIL_VERIFICATION]: 60 * 20,
-   [TokenType.PASSWORD_RESET]: 60 * 5
+   [TokenType.PASSWORD_RESET]: 60 * 5,
+   REFRESH_TOKEN: 60 * 60 * 24 * 7,
+   ACCESS_TOKEN: 60 * 30
 };
 
+export const REFRESH_TOKEN_COOKIE_NAME = 'refreshToken';
 export const EMAIL_VERIFICATION_TOKEN_LENGTH = 8;

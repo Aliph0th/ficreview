@@ -1,37 +1,23 @@
-import {
-   BadRequestException,
-   CanActivate,
-   ExecutionContext,
-   ForbiddenException,
-   Injectable
-} from '@nestjs/common';
+import { ExecutionContext, Injectable } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import type { Request } from 'express';
-import { TokenService } from '../../modules/token/token.service';
 import { METADATA } from '../constants';
+import { AuthGuard } from '@nestjs/passport';
 
 @Injectable()
-export class AuthGuard implements CanActivate {
-   constructor(
-      private readonly tokenService: TokenService,
-      private readonly reflector: Reflector
-   ) {}
+export class JwtAuthGuard extends AuthGuard('jwt') {
+   constructor(private readonly reflector: Reflector) {
+      super();
+   }
 
-   async canActivate(context: ExecutionContext): Promise<boolean> {
-      const isPublic = this.reflector.get<boolean>(METADATA.PUBLIC, context.getHandler());
+   canActivate(context: ExecutionContext) {
+      const isPublic = this.reflector.getAllAndOverride<boolean>(METADATA.PUBLIC, [
+         context.getHandler(),
+         context.getClass()
+      ]);
       if (isPublic) {
          return true;
       }
-      const request = context.switchToHttp().getRequest<Request>();
-      const [prefix, token] = request.headers.authorization?.split(' ') || [];
-      if (prefix?.toLowerCase() !== 'bearer') {
-         throw new BadRequestException('Invalid token prefix');
-      }
-      const data = this.tokenService.validateAccessToken<{ id: number }>(token);
-      if (!data || !data.id) {
-         throw new ForbiddenException('Invalid token');
-      }
-      // request.userID = data.id;
-      return true;
+
+      return super.canActivate(context);
    }
 }

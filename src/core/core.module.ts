@@ -6,6 +6,8 @@ import { sequelizeConfig } from '../common/config';
 import { UserModule } from '../modules/user/user.module';
 import { AuthModule } from '../modules/auth/auth.module';
 import { RedisModule } from './redis/redis.module';
+import { APP_GUARD } from '@nestjs/core';
+import { JwtAuthGuard } from '../common/guards';
 
 dotenv.config();
 
@@ -23,6 +25,7 @@ dotenv.config();
       RedisModule,
       UserModule,
       AuthModule
-   ]
+   ],
+   providers: [{ provide: APP_GUARD, useClass: JwtAuthGuard }]
 })
 export class CoreModule {}

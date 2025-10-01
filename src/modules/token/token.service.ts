@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { sign, verify, JwtPayload, SignOptions } from 'jsonwebtoken';
-import { EMAIL_VERIFICATION_TOKEN_LENGTH, TokenType } from '../../common/constants';
+import { EMAIL_VERIFICATION_TOKEN_LENGTH, TOKEN_TTL, TokenType } from '../../common/constants';
 import { RedisService } from '../../core/redis/redis.service';
 import { randomUUID, randomInt } from 'crypto';
 
@@ -14,13 +14,10 @@ export class TokenService {
 
    signAuthTokens(payload: Record<string, unknown>) {
       const accessTokenSecret = this.configService.getOrThrow<string>('JWT_ACCESS_SECRET');
-      const accessTokenTTL = this.configService.getOrThrow<SignOptions['expiresIn']>('JWT_ACCESS_TTL');
-
       const refreshTokenSecret = this.configService.getOrThrow<string>('JWT_REFRESH_SECRET');
-      const refreshTokenTTL = this.configService.getOrThrow<SignOptions['expiresIn']>('JWT_REFRESH_TTL');
 
-      const accessToken = this.sign(payload, accessTokenSecret, accessTokenTTL);
-      const refreshToken = this.sign(payload, refreshTokenSecret, refreshTokenTTL);
+      const accessToken = this.sign(payload, accessTokenSecret, TOKEN_TTL.ACCESS_TOKEN);
+      const refreshToken = this.sign(payload, refreshTokenSecret, TOKEN_TTL.REFRESH_TOKEN);
       return { accessToken, refreshToken };
    }
 

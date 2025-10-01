@@ -1,13 +1,11 @@
-import { NestFactory, Reflector } from '@nestjs/core';
-import { CoreModule } from './core/core.module';
+import { ValidationPipe } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { NestFactory } from '@nestjs/core';
+import helmet from 'helmet';
 import { WinstonModule } from 'nest-winston';
 import * as winston from 'winston';
 import { loggerPrintF } from './common/utils';
-import { ConfigService } from '@nestjs/config';
-import helmet from 'helmet';
-import { TokenService } from './modules/token/token.service';
-import { ValidationPipe } from '@nestjs/common';
-import { AuthGuard } from './common/guards';
+import { CoreModule } from './core/core.module';
 
 const logger = WinstonModule.createLogger({
    transports: [
@@ -26,8 +24,6 @@ async function bootstrap() {
    const app = await NestFactory.create(CoreModule, { logger });
 
    const configService = app.get(ConfigService);
-   const tokenService = app.get(TokenService);
-   const reflector = app.get(Reflector);
 
    app.use(helmet());
    app.enableCors({
@@ -36,7 +32,6 @@ async function bootstrap() {
    });
 
    app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true, stopAtFirstError: true }));
-   app.useGlobalGuards(new AuthGuard(tokenService, reflector));
 
    await app.listen(configService.get('PORT') ?? 3333);
 }
