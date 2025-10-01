@@ -2,9 +2,10 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { SequelizeModule } from '@nestjs/sequelize';
 import * as dotenv from 'dotenv';
-import { sequelizeConfig } from './config';
+import { sequelizeConfig } from '../common/config';
 import { UserModule } from '../modules/user/user.module';
 import { AuthModule } from '../modules/auth/auth.module';
+import { RedisModule } from './redis/redis.module';
 
 dotenv.config();
 
@@ -19,6 +20,7 @@ dotenv.config();
          inject: [ConfigService],
          useFactory: sequelizeConfig
       }),
+      RedisModule,
       UserModule,
       AuthModule
    ]

@@ -15,7 +15,6 @@ import {
 } from 'sequelize-typescript';
 import { Role } from '../../../common/constants';
 import { Fanfic } from '../../fanfic/models/Fanfic.model';
-
 @Table
 export class User extends Model<InferAttributes<User>, InferCreationAttributes<User>> {
    @PrimaryKey
@@ -38,14 +37,18 @@ export class User extends Model<InferAttributes<User>, InferCreationAttributes<U
    @Column(DataType.STRING)
    declare password: string;
 
-   @AllowNull(false)
    @Default(Role.USER)
    @Column(DataType.ENUM(...Object.values(Role)))
-   declare role: Role;
+   declare role: CreationOptional<Role>;
+
+   @AllowNull(false)
+   @Default(false)
+   @Column({ field: 'is_email_verified', type: DataType.BOOLEAN })
+   declare isEmailVerified: CreationOptional<boolean>;
 
    @Column({ field: 'avatar_path', type: DataType.STRING })
-   declare avatarPath: string | null;
+   declare avatarPath: CreationOptional<string>;
 
    @HasMany(() => Fanfic)
-   fanfics: Fanfic[];
+   fanfics: CreationOptional<Fanfic[]>;
 }

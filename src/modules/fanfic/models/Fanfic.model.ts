@@ -29,25 +29,25 @@ export class Fanfic extends Model<InferAttributes<Fanfic>, InferCreationAttribut
    @Column(DataType.STRING)
    declare title: string;
 
-   @Length({ max: 5000 })
+   @Length({ max: 3000 })
    @Column(DataType.TEXT)
-   declare description: string | null;
+   declare description: CreationOptional<string | null>;
 
    @AllowNull(false)
    @Default(0)
-   @Column(DataType.INTEGER.UNSIGNED)
-   declare likes: number;
+   @Column(DataType.INTEGER)
+   declare likes: CreationOptional<number>;
 
    @Column(DataType.STRING)
-   declare fandom: string;
+   declare fandom: CreationOptional<string | null>;
 
    @Default('{}')
    @Column(DataType.JSONB)
-   declare pairings: object;
+   declare pairings: CreationOptional<object>;
 
    @Default('[]')
    @Column(DataType.JSONB)
-   declare tags: object;
+   declare tags: CreationOptional<object>;
 
    @AllowNull(false)
    @ForeignKey(() => User)
@@ -55,7 +55,7 @@ export class Fanfic extends Model<InferAttributes<Fanfic>, InferCreationAttribut
    declare authorID: number;
 
    @Column({ field: 'cover_path', type: DataType.STRING })
-   declare coverPath: string | null;
+   declare coverPath: CreationOptional<string | null>;
 
    @BelongsTo(() => User, { onDelete: 'CASCADE' })
    author: User;
@@ -68,5 +68,5 @@ export class Fanfic extends Model<InferAttributes<Fanfic>, InferCreationAttribut
       constraints: false,
       scope: { commentableType: 'fanfic' }
    })
-   comments: Comment[];
+   comments: CreationOptional<Comment[]>;
 }

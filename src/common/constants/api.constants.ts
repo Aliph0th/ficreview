@@ -1,0 +1,11 @@
+export enum TokenType {
+   EMAIL_VERIFICATION = 'EMAIL_VERIFICATION',
+   PASSWORD_RESET = 'PASSWORD_RESET'
+}
+
+export const TOKEN_TTL = {
+   [TokenType.EMAIL_VERIFICATION]: 60 * 20,
+   [TokenType.PASSWORD_RESET]: 60 * 5
+};
+
+export const EMAIL_VERIFICATION_TOKEN_LENGTH = 8;

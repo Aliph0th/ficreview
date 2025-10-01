@@ -23,7 +23,7 @@ export class Chapter extends Model<InferAttributes<Chapter>, InferCreationAttrib
    declare id: CreationOptional<number>;
 
    @Column(DataType.STRING)
-   declare name: string;
+   declare name: CreationOptional<string>;
 
    @AllowNull(false)
    @Column(DataType.INTEGER)

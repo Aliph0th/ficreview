@@ -1,10 +1,16 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { sign, verify, JwtPayload, SignOptions } from 'jsonwebtoken';
+import { EMAIL_VERIFICATION_TOKEN_LENGTH, TokenType } from '../../common/constants';
+import { RedisService } from '../../core/redis/redis.service';
+import { randomUUID, randomInt } from 'crypto';
 
 @Injectable()
 export class TokenService {
-   constructor(private readonly configService: ConfigService) {}
+   constructor(
+      private readonly configService: ConfigService,
+      private readonly redisService: RedisService
+   ) {}
 
    signAuthTokens(payload: Record<string, unknown>) {
       const accessTokenSecret = this.configService.getOrThrow<string>('JWT_ACCESS_SECRET');
@@ -25,6 +31,12 @@ export class TokenService {
       return this.verify<T>(token, this.configService.getOrThrow('JWT_REFRESH_SECRET'));
    }
 
+   async issueToken(userID: number, type: TokenType, ttl: number) {
+      const token = this.generateToken(type);
+      await this.redisService.saveToken(type, token, userID, ttl);
+      return token;
+   }
+
    private sign(payload: Record<string, unknown>, secret: string, expiresIn?: SignOptions['expiresIn']) {
       return sign(payload, secret, {
          expiresIn,
@@ -40,6 +52,17 @@ export class TokenService {
          }) as T;
       } catch (_) {
          return null;
+      }
+   }
+
+   private generateToken(type: TokenType) {
+      switch (type) {
+         case TokenType.EMAIL_VERIFICATION: {
+            const n = EMAIL_VERIFICATION_TOKEN_LENGTH;
+            return randomInt(10 ** (n - 1), 10 ** n).toString();
+         }
+         case TokenType.PASSWORD_RESET:
+            return randomUUID();
       }
    }
 }

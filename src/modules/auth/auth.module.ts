@@ -5,9 +5,10 @@ import { UserModule } from '../user/user.module';
 import { PassportModule } from '@nestjs/passport';
 import { LocalStrategy } from './local.strategy';
 import { TokenModule } from '../token/token.module';
+import { MailModule } from '../mail/mail.module';
 
 @Module({
-   imports: [UserModule, TokenModule, PassportModule],
+   imports: [UserModule, TokenModule, PassportModule, MailModule],
    controllers: [AuthController],
    providers: [AuthService, LocalStrategy]
 })
