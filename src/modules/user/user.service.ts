@@ -13,4 +13,11 @@ export class UserService {
    async findByEmail(email: string) {
       return await this.userModel.findOne({ where: { email } });
    }
+   async findByID(id: number) {
+      return await this.userModel.findByPk(id);
+   }
+
+   async setVerifiedEmail(id: number) {
+      await this.userModel.update({ isEmailVerified: true }, { where: { id } });
+   }
 }

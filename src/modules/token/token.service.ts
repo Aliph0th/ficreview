@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { sign, verify, JwtPayload, SignOptions } from 'jsonwebtoken';
 import { EMAIL_VERIFICATION_TOKEN_LENGTH, TOKEN_TTL, TokenType } from '../../common/constants';
@@ -32,6 +32,19 @@ export class TokenService {
       const token = this.generateToken(type);
       await this.redisService.saveToken(type, token, userID, ttl);
       return token;
+   }
+
+   async useToken(token: string | number, type: TokenType, userID: number) {
+      const isTokenExists = await this.redisService.isTokenExists(type, token.toString(), userID);
+      if (!isTokenExists) {
+         throw new NotFoundException('Token not found');
+      }
+      await this.redisService.deleteToken(type, token.toString(), userID);
+      return userID;
+   }
+
+   async revokeTokens(userID: number, type: TokenType) {
+      await this.redisService.revokeTokens(type, userID);
    }
 
    private sign(payload: Record<string, unknown>, secret: string, expiresIn?: SignOptions['expiresIn']) {

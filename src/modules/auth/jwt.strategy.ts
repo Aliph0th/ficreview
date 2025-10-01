@@ -15,8 +15,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       });
    }
 
-   async validate(payload: { id: number }) {
-      console.log(payload);
+   async validate(payload: { id: number; isEmailVerified?: boolean }) {
       return payload;
    }
 }

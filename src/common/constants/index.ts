@@ -4,5 +4,6 @@ export * from './api.constants';
 export * from './redis.constants';
 
 export const METADATA = {
-   PUBLIC: 'isPublic'
+   PUBLIC: 'isPublic',
+   UNCOMPLETED_AUTH: 'isUncompletedAuth'
 };

@@ -7,7 +7,7 @@ import { UserModule } from '../modules/user/user.module';
 import { AuthModule } from '../modules/auth/auth.module';
 import { RedisModule } from './redis/redis.module';
 import { APP_GUARD } from '@nestjs/core';
-import { JwtAuthGuard } from '../common/guards';
+import { JwtAuthGuard, UncompletedAuthGuard } from '../common/guards';
 
 dotenv.config();
 
@@ -26,6 +26,9 @@ dotenv.config();
       UserModule,
       AuthModule
    ],
-   providers: [{ provide: APP_GUARD, useClass: JwtAuthGuard }]
+   providers: [
+      { provide: APP_GUARD, useClass: JwtAuthGuard },
+      { provide: APP_GUARD, useClass: UncompletedAuthGuard }
+   ]
 })
 export class CoreModule {}

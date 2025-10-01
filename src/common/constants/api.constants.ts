@@ -11,4 +11,5 @@ export const TOKEN_TTL = {
 };
 
 export const REFRESH_TOKEN_COOKIE_NAME = 'refreshToken';
+export const EMAIL_VERIFY_RESEND_COOLDOWN = 60 * 1.5;
 export const EMAIL_VERIFICATION_TOKEN_LENGTH = 8;

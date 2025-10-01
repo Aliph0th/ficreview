@@ -1,1 +1,2 @@
-export * from './auth.guard';
+export * from './JwtAuth.guard';
+export * from './UncompletedAuth.guard';

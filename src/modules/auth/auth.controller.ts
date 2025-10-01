@@ -12,9 +12,9 @@ import {
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import type { Request, Response } from 'express';
-import { Public } from '../../common/decorators';
+import { AuthUncompleted, Public } from '../../common/decorators';
 import { AuthService } from './auth.service';
-import { RegisterUserDTO } from './dto';
+import { EmailVerifyDTO, RegisterUserDTO } from './dto';
 import { UserDTO } from '../user/dto';
 import { REFRESH_TOKEN_COOKIE_NAME, TOKEN_TTL } from '../../common/constants';
 
@@ -24,14 +24,16 @@ export class AuthController {
    constructor(private readonly authService: AuthService) {}
 
    @Public()
+   @AuthUncompleted()
    @Post('register')
    async register(@Body() dto: RegisterUserDTO) {
       const { user, isSentSuccessful } = await this.authService.register(dto);
       return { user: new UserDTO(user), isEmailSent: isSentSuccessful };
    }
 
-   @UseGuards(AuthGuard('local'))
    @Public()
+   @AuthUncompleted()
+   @UseGuards(AuthGuard('local'))
    @HttpCode(HttpStatus.OK)
    @Post('login')
    async login(@Req() request: Request, @Res({ passthrough: true }) response: Response) {
@@ -41,5 +43,29 @@ export class AuthController {
          httpOnly: true
       });
       return { accessToken };
+   }
+
+   @Post('email/verify')
+   @HttpCode(HttpStatus.OK)
+   @AuthUncompleted()
+   async verifyEmail(
+      @Body() dto: EmailVerifyDTO,
+      @Req() request: Request,
+      @Res({ passthrough: true }) response: Response
+   ) {
+      const { accessToken, refreshToken } = await this.authService.verifyEmail(dto.code, request.user!);
+      response.cookie(REFRESH_TOKEN_COOKIE_NAME, refreshToken, {
+         maxAge: TOKEN_TTL.REFRESH_TOKEN * 1000,
+         httpOnly: true
+      });
+      return { accessToken };
+   }
+
+   @Post('email/resend')
+   @HttpCode(HttpStatus.OK)
+   @AuthUncompleted()
+   async resendEmail(@Req() request: Request) {
+      const cooldown = await this.authService.resendVerificationEmail(request.user!.id);
+      return { cooldown };
    }
 }
