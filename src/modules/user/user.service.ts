@@ -1,10 +1,19 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/sequelize';
 import { User } from './models/User.model';
+import { randomUUID } from 'crypto';
+import sharp from 'sharp';
+import { AVATAR_SIZE } from '../../common/constants';
+import { StorageService } from '../storage/storage.service';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class UserService {
-   constructor(@InjectModel(User) private userModel: typeof User) {}
+   constructor(
+      @InjectModel(User) private userModel: typeof User,
+      private readonly storage: StorageService,
+      private readonly configService: ConfigService
+   ) {}
 
    async create({ email, username, password }: Pick<User, 'email' | 'username' | 'password'>) {
       return await this.userModel.create({ email, username, password });
@@ -19,5 +28,41 @@ export class UserService {
 
    async setVerifiedEmail(id: number) {
       await this.userModel.update({ isEmailVerified: true }, { where: { id } });
+   }
+
+   async changeAvatar(file: Buffer, userID: number) {
+      const user = await this.findByID(userID);
+      if (!user) {
+         throw new NotFoundException('User not found');
+      }
+      const folder = this.configService.getOrThrow<string>('S3_AVATAR_FOLDER');
+      if (user.avatarPath) {
+         await this.storage.delete({
+            file: user.avatarPath,
+            folder,
+            ext: 'webp'
+         });
+      }
+      const processedBuffer = await sharp(file)
+         .resize(AVATAR_SIZE, AVATAR_SIZE)
+         .webp({ effort: 3 })
+         .toBuffer();
+      const fileID = randomUUID();
+
+      await this.storage.put(
+         processedBuffer,
+         {
+            file: fileID,
+            folder,
+            ext: 'webp'
+         },
+         'public-read'
+      );
+
+      await this.userModel.update({ avatarPath: fileID }, { where: { id: userID } });
+
+      return {
+         url: new URL(`${folder}/${fileID}.webp`, this.configService.getOrThrow('S3_CDN')).toString()
+      };
    }
 }

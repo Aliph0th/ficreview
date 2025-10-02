@@ -1,5 +1,11 @@
 import * as winston from 'winston';
 
+export const getFormatDate = () => new Date().toISOString().slice(0, 10).replace(/-/g, '');
+export const getISODate = () => new Date().toISOString().replace(/[:-]|\.\d{3}/g, '');
+
+export const getAvatarUrl = (value?: string) =>
+   value ? new URL(`${process.env.S3_AVATAR_FOLDER}/${value}.webp`, process.env.S3_CDN).toString() : null;
+
 export const loggerPrintF = (
    info: winston.Logform.TransformableInfo & {
       message: any;

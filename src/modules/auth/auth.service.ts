@@ -58,7 +58,11 @@ export class AuthService {
    }
 
    async login(userID: number) {
-      return this.tokenService.signAuthTokens({ id: userID });
+      const user = await this.userService.findByID(userID);
+      if (!user) {
+         throw new NotFoundException('User not found');
+      }
+      return this.tokenService.signAuthTokens({ id: userID, isEmailVerified: user.isEmailVerified });
    }
 
    async verifyEmail(code: number, user: Express.User) {

@@ -1,14 +1,14 @@
-import { Exclude } from 'class-transformer';
+import { Exclude, Expose, Transform } from 'class-transformer';
 import { Role } from '../../../common/constants';
+import { getAvatarUrl } from '../../../common/utils';
 
 export class UserDTO {
    id: number;
    email: string;
    username: string;
-   // @Transform(({ value }) =>
-   //    value ? new URL(`${process.env.S3_AVATAR_FOLDER}/${value}.webp`, process.env.S3_CDN).toString() : null
-   // )
-   // avatar?: string;
+   @Expose()
+   @Transform(({ obj }) => getAvatarUrl(obj.avatarPath))
+   avatar?: string;
    isEmailVerified: boolean;
    role: Role;
 
@@ -17,6 +17,8 @@ export class UserDTO {
 
    @Exclude()
    password: string;
+   @Exclude()
+   avatarPath: string;
 
    constructor(partial: Partial<UserDTO>) {
       Object.assign(this, partial);
