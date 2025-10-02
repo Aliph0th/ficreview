@@ -5,6 +5,8 @@ export const getISODate = () => new Date().toISOString().replace(/[:-]|\.\d{3}/g
 
 export const getAvatarUrl = (value?: string) =>
    value ? new URL(`${process.env.S3_AVATAR_FOLDER}/${value}.webp`, process.env.S3_CDN).toString() : null;
+export const getCoverUrl = (value?: string) =>
+   value ? new URL(`${process.env.S3_COVERS_FOLDER}/${value}.webp`, process.env.S3_CDN).toString() : null;
 
 export const loggerPrintF = (
    info: winston.Logform.TransformableInfo & {

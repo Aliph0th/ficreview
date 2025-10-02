@@ -25,17 +25,21 @@ export class UserService {
    async findByID(id: number) {
       return await this.userModel.findByPk(id);
    }
+   async findByIDOrThrow(id: number) {
+      const user = await this.userModel.findByPk(id);
+      if (!user) {
+         throw new NotFoundException('User not found');
+      }
+      return user;
+   }
 
    async setVerifiedEmail(id: number) {
       await this.userModel.update({ isEmailVerified: true }, { where: { id } });
    }
 
    async changeAvatar(file: Buffer, userID: number) {
-      const user = await this.findByID(userID);
-      if (!user) {
-         throw new NotFoundException('User not found');
-      }
-      const folder = this.configService.getOrThrow<string>('S3_AVATAR_FOLDER');
+      const user = await this.findByIDOrThrow(userID);
+      const folder = this.configService.getOrThrow<string>('S3_AVATARS_FOLDER');
       if (user.avatarPath) {
          await this.storage.delete({
             file: user.avatarPath,

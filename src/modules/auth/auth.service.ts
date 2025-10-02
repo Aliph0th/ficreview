@@ -3,8 +3,7 @@ import {
    ConflictException,
    HttpException,
    HttpStatus,
-   Injectable,
-   NotFoundException
+   Injectable
 } from '@nestjs/common';
 import * as bcrypt from 'bcryptjs';
 import {
@@ -58,10 +57,7 @@ export class AuthService {
    }
 
    async login(userID: number) {
-      const user = await this.userService.findByID(userID);
-      if (!user) {
-         throw new NotFoundException('User not found');
-      }
+      const user = await this.userService.findByIDOrThrow(userID);
       return this.tokenService.signAuthTokens({ id: userID, isEmailVerified: user.isEmailVerified });
    }
 
@@ -75,10 +71,7 @@ export class AuthService {
    }
 
    async resendVerificationEmail(userID: number) {
-      const user = await this.userService.findByID(userID);
-      if (!user) {
-         throw new NotFoundException('User not found');
-      }
+      const user = await this.userService.findByIDOrThrow(userID);
       if (user.isEmailVerified) {
          throw new BadRequestException('Email is already verified');
       }

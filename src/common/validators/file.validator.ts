@@ -1,16 +1,20 @@
 import { ArgumentMetadata, Injectable, PipeTransform, UnprocessableEntityException } from '@nestjs/common';
-import { ACCEPTABLE_AVATAR_TYPES, AVATAR_MAX_FILE_SIZE } from '../../../common/constants';
 
 @Injectable()
 export class FileValidationPipe implements PipeTransform {
+   constructor(
+      private readonly mimes: string[],
+      private readonly maxSize: number,
+      private readonly isRequired = true
+   ) {}
    transform(value: Express.Multer.File, _: ArgumentMetadata) {
-      if (!value) {
+      if (!value && this.isRequired) {
          throw new UnprocessableEntityException('File is required');
       }
-      if (!ACCEPTABLE_AVATAR_TYPES.includes(value.mimetype)) {
+      if (value && !this.mimes.includes(value.mimetype)) {
          throw new UnprocessableEntityException('Invalid file type');
       }
-      if (value.size > AVATAR_MAX_FILE_SIZE) {
+      if (value && value.size > this.maxSize) {
          throw new UnprocessableEntityException('File is too big');
       }
       return value;

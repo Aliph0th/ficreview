@@ -41,13 +41,13 @@ export class Fanfic extends Model<InferAttributes<Fanfic>, InferCreationAttribut
    @Column(DataType.STRING)
    declare fandom: CreationOptional<string | null>;
 
-   @Default('{}')
+   @Default('[]')
    @Column(DataType.JSONB)
-   declare pairings: CreationOptional<object>;
+   declare pairings: CreationOptional<string[]>;
 
    @Default('[]')
    @Column(DataType.JSONB)
-   declare tags: CreationOptional<object>;
+   declare tags: CreationOptional<string[]>;
 
    @AllowNull(false)
    @ForeignKey(() => User)
@@ -58,10 +58,10 @@ export class Fanfic extends Model<InferAttributes<Fanfic>, InferCreationAttribut
    declare coverPath: CreationOptional<string | null>;
 
    @BelongsTo(() => User, { onDelete: 'CASCADE' })
-   author: User;
+   author: CreationOptional<User>;
 
    @HasMany(() => Chapter)
-   chapters: Chapter[];
+   chapters: CreationOptional<Chapter[]>;
 
    @HasMany(() => Comment, {
       foreignKey: 'commentableID',

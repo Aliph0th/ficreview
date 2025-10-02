@@ -8,6 +8,7 @@ import { AuthModule } from '../modules/auth/auth.module';
 import { RedisModule } from './redis/redis.module';
 import { APP_GUARD } from '@nestjs/core';
 import { JwtAuthGuard, UncompletedAuthGuard } from '../common/guards';
+import { FanficModule } from '../modules/fanfic/fanfic.module';
 
 dotenv.config();
 
@@ -24,7 +25,8 @@ dotenv.config();
       }),
       RedisModule,
       UserModule,
-      AuthModule
+      AuthModule,
+      FanficModule
    ],
    providers: [
       { provide: APP_GUARD, useClass: JwtAuthGuard },
