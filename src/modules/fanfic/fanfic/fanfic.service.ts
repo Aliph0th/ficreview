@@ -3,20 +3,23 @@ import { ConfigService } from '@nestjs/config';
 import { InjectModel } from '@nestjs/sequelize';
 import { randomUUID } from 'crypto';
 import sharp from 'sharp';
-import { StorageService } from '../storage/storage.service';
-import { UserService } from '../user/user.service';
-import { CreateFanficDTO } from './dto';
-import { Fanfic } from './models/Fanfic.model';
-import { User } from '../user/models/User.model';
+import { StorageService } from '../../storage/storage.service';
+import { User } from '../../user/models/User.model';
+import { CreateFanficDTO } from '../dto';
+import { Fanfic } from '../models/Fanfic.model';
 
 @Injectable()
 export class FanficService {
    constructor(
       @InjectModel(Fanfic) private fanficModel: typeof Fanfic,
-      private readonly userService: UserService,
       private readonly storage: StorageService,
       private readonly configService: ConfigService
    ) {}
+
+   async isFanficExists(id: number) {
+      const fanfic = await this.fanficModel.findByPk(id, { attributes: ['id'] });
+      return !!fanfic;
+   }
 
    async createFanfic(dto: CreateFanficDTO, userID: number, file?: Express.Multer.File) {
       let fileID: string | undefined;

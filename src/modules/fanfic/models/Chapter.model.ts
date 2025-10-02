@@ -22,12 +22,9 @@ export class Chapter extends Model<InferAttributes<Chapter>, InferCreationAttrib
    @Column(DataType.INTEGER)
    declare id: CreationOptional<number>;
 
-   @Column(DataType.STRING)
-   declare name: CreationOptional<string>;
-
    @AllowNull(false)
-   @Column(DataType.INTEGER)
-   declare number: number;
+   @Column(DataType.STRING)
+   declare title: string;
 
    @AllowNull(false)
    @Column({ field: 'content_path', type: DataType.STRING })
@@ -39,12 +36,12 @@ export class Chapter extends Model<InferAttributes<Chapter>, InferCreationAttrib
    declare fanficID: number;
 
    @BelongsTo(() => Fanfic, { onDelete: 'CASCADE' })
-   fanfic: Fanfic;
+   fanfic: CreationOptional<Fanfic>;
 
    @HasMany(() => Comment, {
       foreignKey: 'commentableID',
       constraints: false,
       scope: { commentableType: 'chapter' }
    })
-   comments: Comment[];
+   comments: CreationOptional<Comment[]>;
 }

@@ -9,13 +9,13 @@ import {
    Get,
    Param
 } from '@nestjs/common';
-import { FanficService } from './fanfic.service';
 import type { Request } from 'express';
-import { CreateFanficDTO, FanficDTO } from './dto';
-import { AuthUncompleted, FileInterceptor, Public } from '../../common/decorators';
-import { FileValidationPipe } from '../../common/validators';
-import { ACCEPTABLE_FANFIC_TYPES, FANFIC_MAX_FILE_SIZE } from '../../common/constants';
-import { ID } from '../../common/dto';
+import { CreateFanficDTO, FanficDTO } from '../dto';
+import { AuthUncompleted, FileInterceptor, Public } from '../../../common/decorators';
+import { FileValidationPipe } from '../../../common/validators';
+import { ACCEPTABLE_FANFIC_TYPES, FANFIC_MAX_FILE_SIZE } from '../../../common/constants';
+import { ID } from '../../../common/dto';
+import { FanficService } from './fanfic.service';
 
 @UseInterceptors(ClassSerializerInterceptor)
 @Controller('fanfics')
