@@ -1,4 +1,4 @@
-import { IsNumber, IsString, Length, Min } from 'class-validator';
+import { IsInt, IsNumber, IsString, Length, Min } from 'class-validator';
 import { VALIDATION_LENGTH } from '../../../common/constants';
 
 export class CreateChapterDTO {
@@ -7,6 +7,7 @@ export class CreateChapterDTO {
    title: string;
 
    @IsNumber()
+   @IsInt()
    @Min(1)
    fanficID: number;
 

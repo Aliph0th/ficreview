@@ -17,6 +17,11 @@ export class ChapterService {
       private readonly configService: ConfigService
    ) {}
 
+   async isChapterExists(id: number) {
+      const chapter = await this.chapterModel.findByPk(id, { attributes: ['id'] });
+      return !!chapter;
+   }
+
    async createChapter(dto: CreateChapterDTO) {
       const fanficExists = await this.fanficService.isFanficExists(dto.fanficID);
       if (!fanficExists) {

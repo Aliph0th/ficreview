@@ -10,7 +10,6 @@ import {
 import { ChapterService } from './chapter.service';
 import { Public, AuthUncompleted } from '../../../common/decorators';
 import { ID } from '../../../common/dto';
-import type { Request } from 'express';
 import { ChapterDTO, CreateChapterDTO } from '../dto';
 
 @UseInterceptors(ClassSerializerInterceptor)

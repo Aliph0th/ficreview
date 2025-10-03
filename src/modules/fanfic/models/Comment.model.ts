@@ -41,11 +41,11 @@ export class Comment extends Model<InferAttributes<Comment>, InferCreationAttrib
    declare commentableType: CommentableType;
 
    @BelongsTo(() => User, { onDelete: 'CASCADE' })
-   author: User;
+   author: CreationOptional<User>;
 
    @BelongsTo(() => Fanfic, { foreignKey: 'commentableID', constraints: false, onDelete: 'CASCADE' })
-   fanfic: Fanfic;
+   fanfic: CreationOptional<Fanfic>;
 
    @BelongsTo(() => Chapter, { foreignKey: 'commentableID', constraints: false, onDelete: 'CASCADE' })
-   chapter: Chapter;
+   chapter: CreationOptional<Chapter>;
 }
