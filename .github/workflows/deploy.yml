@@ -21,15 +21,10 @@ jobs:
            run: |
               echo "$ENVS" > .env
 
-         - name: Run migrations
+         - name: Build and run
            shell: bash
            run: |
-              docker compose up --build --abort-on-container-exit migrator
-
-         - name: Build and run stack
-           shell: bash
-           run: |
-              docker compose up -d --build --remove-orphans pg redis app
+              docker compose up -d --build --remove-orphans
 
          - name: Show running services
            shell: bash
