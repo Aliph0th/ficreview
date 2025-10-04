@@ -79,4 +79,36 @@ export class FanficService {
       await fanfic.destroy();
       return id;
    }
+
+   async updateCover(id: number, userID: number, file: Express.Multer.File) {
+      const fanfic = await this.fanficModel.findByPk(id);
+      if (!fanfic) throw new NotFoundException('Fanfic not found');
+      if (fanfic.authorID !== userID) {
+         throw new ForbiddenException('You do not have permission to update this fanfic');
+      }
+
+      if (fanfic.coverPath) {
+         await this.storage.delete({
+            file: fanfic.coverPath,
+            folder: this.configService.getOrThrow<string>('S3_COVERS_FOLDER'),
+            ext: 'webp'
+         });
+      }
+
+      const fileID = randomUUID();
+      const processedBuffer = await sharp(file.buffer).webp({ effort: 3 }).toBuffer();
+      await this.storage.put(
+         processedBuffer,
+         {
+            file: fileID,
+            folder: this.configService.getOrThrow<string>('S3_COVERS_FOLDER'),
+            ext: 'webp'
+         },
+         'public-read'
+      );
+
+      fanfic.coverPath = fileID;
+      await fanfic.save();
+      return await this.getFanficByIDOrThrow(id);
+   }
 }

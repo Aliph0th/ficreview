@@ -6,3 +6,5 @@ export * from './Comment.dto';
 export * from './CreateComment.dto';
 export * from './GetComment.dto';
 export * from './RoomPayload.dto';
+export * from './UpdateComment.dto';
+export * from './UpdateChapter.dto';

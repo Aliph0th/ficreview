@@ -2,6 +2,7 @@ import {
    Body,
    ClassSerializerInterceptor,
    Controller,
+   Patch,
    Delete,
    Get,
    Param,
@@ -13,7 +14,7 @@ import type { Request } from 'express';
 import { ChapterService } from './chapter.service';
 import { Public, AuthUncompleted } from '../../../common/decorators';
 import { ID } from '../../../common/dto';
-import { ChapterDTO, CreateChapterDTO } from '../dto';
+import { ChapterDTO, CreateChapterDTO, UpdateChapterDTO } from '../dto';
 
 @UseInterceptors(ClassSerializerInterceptor)
 @Controller('chapters')
@@ -38,5 +39,15 @@ export class ChapterController {
    async deleteChapter(@Param() { id }: ID, @Req() request: Request) {
       const deletedID = await this.chapterService.deleteChapter(id, request.user!.id);
       return { deleted: true, id: deletedID };
+   }
+
+   @Patch(':id')
+   async updateChapter(@Param() { id }: ID, @Body() dto: UpdateChapterDTO, @Req() request: Request) {
+      const { chapter, content } = await this.chapterService.updateChapterContent(
+         id,
+         request.user!.id,
+         dto.content
+      );
+      return new ChapterDTO(chapter.get({ plain: true }), content);
    }
 }

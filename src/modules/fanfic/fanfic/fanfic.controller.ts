@@ -8,7 +8,8 @@ import {
    UseInterceptors,
    Get,
    Param,
-   Delete
+   Delete,
+   Patch
 } from '@nestjs/common';
 import type { Request } from 'express';
 import { CreateFanficDTO, FanficDTO } from '../dto';
@@ -58,5 +59,17 @@ export class FanficController {
    async deleteFanfic(@Param() { id }: ID, @Req() request: Request) {
       const deletedID = await this.fanficService.deleteFanfic(id, request.user!.id);
       return { deleted: true, id: deletedID };
+   }
+
+   @FileInterceptor('file')
+   @Patch(':id/cover')
+   async updateCover(
+      @Param() { id }: ID,
+      @Req() request: Request,
+      @UploadedFile(new FileValidationPipe(ACCEPTABLE_FANFIC_TYPES, FANFIC_MAX_FILE_SIZE, true))
+      file: Express.Multer.File
+   ) {
+      const fanfic = await this.fanficService.updateCover(id, request.user!.id, file);
+      return new FanficDTO(fanfic.get({ plain: true }));
    }
 }

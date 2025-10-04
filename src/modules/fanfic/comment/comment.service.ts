@@ -116,12 +116,7 @@ export class CommentService {
    }
 
    async deleteComment(id: number, userID: number) {
-      const comment = await this.commentModel.findByPk(id);
-      if (!comment) throw new NotFoundException('Comment not found');
-
-      if (comment.authorID !== userID) {
-         throw new ForbiddenException('Comment not found');
-      }
+      const comment = await this.getOwnComment(id, userID);
 
       await this.storage.delete({
          file: comment.contentPath,
@@ -131,6 +126,34 @@ export class CommentService {
 
       await comment.destroy();
       return id;
+   }
+
+   async updateCommentContent(id: number, userID: number, content: string) {
+      const comment = await this.getOwnComment(id, userID);
+
+      await this.storage.put(
+         Buffer.from(content, 'utf-8'),
+         {
+            file: comment.contentPath,
+            folder: this.configService.getOrThrow<string>('S3_COMMENTS_FOLDER'),
+            ext: 'txt'
+         },
+         'private'
+      );
+
+      const updatedComment = await this.getCommentByIDOrThrow(id);
+      return updatedComment;
+   }
+
+   private async getOwnComment(id: number, userID: number) {
+      const comment = await this.commentModel.findByPk(id);
+      if (!comment) {
+         throw new NotFoundException('Comment not found');
+      }
+      if (comment.authorID !== userID) {
+         throw new ForbiddenException('You do not have permission to edit this comment');
+      }
+      return comment;
    }
 
    private resolveIncludes(type?: CommentableType) {

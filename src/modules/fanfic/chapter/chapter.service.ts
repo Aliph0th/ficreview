@@ -92,14 +92,7 @@ export class ChapterService {
    }
 
    async deleteChapter(id: number, userID: number) {
-      const chapter = await this.chapterModel.findByPk(id, {
-         include: [{ model: Fanfic, attributes: ['id', 'authorID'] }]
-      });
-      if (!chapter || !chapter.fanfic) throw new NotFoundException('Chapter not found');
-
-      if (chapter.fanfic.authorID !== userID) {
-         throw new ForbiddenException('You do not have permission to delete this chapter');
-      }
+      const chapter = await this.getOwnChapter(id, userID);
 
       await this.storage.delete({
          file: chapter.contentPath,
@@ -109,5 +102,36 @@ export class ChapterService {
 
       await chapter.destroy();
       return id;
+   }
+
+   async updateChapterContent(id: number, userID: number, content: string) {
+      const chapter = await this.getOwnChapter(id, userID);
+
+      await this.storage.put(
+         Buffer.from(content, 'utf-8'),
+         {
+            file: chapter.contentPath,
+            folder: this.configService.getOrThrow<string>('S3_CHAPTERS_FOLDER'),
+            ext: 'txt'
+         },
+         'private'
+      );
+
+      const updatedChapter = await this.getChapterByIDOrThrow(id);
+      return updatedChapter;
+   }
+
+   private async getOwnChapter(id: number, userID: number) {
+      const chapter = await this.chapterModel.findByPk(id, {
+         include: [{ model: Fanfic, attributes: ['id', 'authorID'] }]
+      });
+      const plainChapter = chapter?.get({ plain: true });
+      if (!plainChapter || !plainChapter.fanfic) {
+         throw new NotFoundException('Chapter not found');
+      }
+      if (plainChapter.fanfic.authorID !== userID) {
+         throw new ForbiddenException('You do not have permission to edit this chapter');
+      }
+      return chapter!;
    }
 }

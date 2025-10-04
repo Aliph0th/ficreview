@@ -40,6 +40,7 @@ export class UserService {
    async changeAvatar(file: Buffer, userID: number) {
       const user = await this.findByIDOrThrow(userID);
       const folder = this.configService.getOrThrow<string>('S3_AVATARS_FOLDER');
+
       if (user.avatarPath) {
          await this.storage.delete({
             file: user.avatarPath,
@@ -47,11 +48,12 @@ export class UserService {
             ext: 'webp'
          });
       }
+
+      const fileID = randomUUID();
       const processedBuffer = await sharp(file)
          .resize(AVATAR_SIZE, AVATAR_SIZE)
          .webp({ effort: 3 })
          .toBuffer();
-      const fileID = randomUUID();
 
       await this.storage.put(
          processedBuffer,
@@ -68,5 +70,15 @@ export class UserService {
       return {
          url: new URL(`${folder}/${fileID}.webp`, this.configService.getOrThrow('S3_CDN')).toString()
       };
+   }
+
+   async changeUsername(userID: number, username: string) {
+      const user = await this.userModel.findByPk(userID);
+      if (!user) {
+         throw new NotFoundException('User not found');
+      }
+      user.username = username;
+      await user.save();
+      return user;
    }
 }

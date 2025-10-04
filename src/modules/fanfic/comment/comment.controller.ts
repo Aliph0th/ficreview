@@ -2,6 +2,7 @@ import {
    Body,
    ClassSerializerInterceptor,
    Controller,
+   Patch,
    Delete,
    Get,
    Param,
@@ -11,7 +12,7 @@ import {
    UseInterceptors
 } from '@nestjs/common';
 import type { Request } from 'express';
-import { CommentDTO, CreateCommentDTO, GetCommentsDTO } from '../dto';
+import { CommentDTO, CreateCommentDTO, GetCommentsDTO, UpdateCommentDTO } from '../dto';
 import { CommentService } from './comment.service';
 import { ID, PaginationDTO } from '../../../common/dto';
 import { AuthUncompleted, Public } from '../../../common/decorators';
@@ -45,5 +46,11 @@ export class CommentController {
    async deleteComment(@Param() { id }: ID, @Req() request: Request) {
       const deletedID = await this.commentService.deleteComment(id, request.user!.id);
       return { deleted: true, id: deletedID };
+   }
+
+   @Patch(':id')
+   async updateComment(@Param() { id }: ID, @Body() dto: UpdateCommentDTO, @Req() request: Request) {
+      const updated = await this.commentService.updateCommentContent(id, request.user!.id, dto.content);
+      return new CommentDTO(updated.comment.get({ plain: true }), updated.content);
    }
 }
