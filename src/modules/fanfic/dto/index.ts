@@ -8,3 +8,4 @@ export * from './GetComment.dto';
 export * from './RoomPayload.dto';
 export * from './UpdateComment.dto';
 export * from './UpdateChapter.dto';
+export * from './GetFanfics.dto';

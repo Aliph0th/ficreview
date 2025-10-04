@@ -9,10 +9,11 @@ import {
    Get,
    Param,
    Delete,
-   Patch
+   Patch,
+   Query
 } from '@nestjs/common';
 import type { Request } from 'express';
-import { CreateFanficDTO, FanficDTO } from '../dto';
+import { CreateFanficDTO, FanficDTO, GetFanficsDTO } from '../dto';
 import { AuthUncompleted, FileInterceptor, Public } from '../../../common/decorators';
 import { FileValidationPipe } from '../../../common/validators';
 import { ACCEPTABLE_FANFIC_TYPES, FANFIC_MAX_FILE_SIZE } from '../../../common/constants';
@@ -51,8 +52,15 @@ export class FanficController {
    @Public()
    @AuthUncompleted()
    @Get(':id/overview')
-   async getChapters(@Param() { id }: ID, pagination: PaginationDTO) {
+   async getChapters(@Param() { id }: ID, @Query() pagination: PaginationDTO) {
       return await this.chapterService.getChapters(id, pagination);
+   }
+
+   @Public()
+   @AuthUncompleted()
+   @Get()
+   async getFanfics(@Query() query: GetFanficsDTO) {
+      return await this.fanficService.getFanfics(query);
    }
 
    @Delete(':id')

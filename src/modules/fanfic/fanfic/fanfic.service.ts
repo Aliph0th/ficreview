@@ -6,7 +6,10 @@ import sharp from 'sharp';
 import { StorageService } from '../../storage/storage.service';
 import { User } from '../../user/models/User.model';
 import { CreateFanficDTO } from '../dto';
+import { FanficDTO } from '../dto/Fanfic.dto';
 import { Fanfic } from '../models/Fanfic.model';
+import { GetFanficsDTO } from '../dto/GetFanfics.dto';
+import { FindAndCountOptions, Order } from 'sequelize';
 
 @Injectable()
 export class FanficService {
@@ -58,6 +61,35 @@ export class FanficService {
          throw new NotFoundException('Fanfic not found');
       }
       return fanfic;
+   }
+
+   async getFanfics({ page, limit, sort }: GetFanficsDTO) {
+      const offset = (page - 1) * limit;
+      const order: Order = [['createdAt', 'DESC']];
+      if (sort === 'popular') {
+         order.unshift(['likes', 'DESC']);
+      }
+      const options: FindAndCountOptions<Fanfic> = {
+         include: { model: User, attributes: ['id', 'username', 'role'] },
+         order,
+         offset,
+         limit
+      };
+
+      const { count, rows } = await this.fanficModel.findAndCountAll(options);
+      const totalPages = Math.ceil(count / limit);
+
+      return {
+         data: rows.map(f => new FanficDTO(f.get({ plain: true }))),
+         pagination: {
+            currentPage: page,
+            totalPages,
+            totalItems: count,
+            itemsPerPage: limit,
+            hasNextPage: page < totalPages,
+            hasPrevPage: page > 1
+         }
+      };
    }
 
    async deleteFanfic(id: number, userID: number) {
