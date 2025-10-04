@@ -14,13 +14,17 @@ import { CreateFanficDTO, FanficDTO } from '../dto';
 import { AuthUncompleted, FileInterceptor, Public } from '../../../common/decorators';
 import { FileValidationPipe } from '../../../common/validators';
 import { ACCEPTABLE_FANFIC_TYPES, FANFIC_MAX_FILE_SIZE } from '../../../common/constants';
-import { ID } from '../../../common/dto';
+import { ID, PaginationDTO } from '../../../common/dto';
 import { FanficService } from './fanfic.service';
+import { ChapterService } from '../chapter/chapter.service';
 
 @UseInterceptors(ClassSerializerInterceptor)
 @Controller('fanfics')
 export class FanficController {
-   constructor(private readonly fanficService: FanficService) {}
+   constructor(
+      private readonly fanficService: FanficService,
+      private readonly chapterService: ChapterService
+   ) {}
 
    @FileInterceptor('file')
    @Post()
@@ -40,5 +44,12 @@ export class FanficController {
    async getFanficByID(@Param() { id }: ID) {
       const fanfic = await this.fanficService.getFanficByIDOrThrow(id);
       return new FanficDTO(fanfic.get({ plain: true }));
+   }
+
+   @Public()
+   @AuthUncompleted()
+   @Get(':id/overview')
+   async getChapters(@Param() { id }: ID, pagination: PaginationDTO) {
+      return await this.chapterService.getChapters(id, pagination);
    }
 }

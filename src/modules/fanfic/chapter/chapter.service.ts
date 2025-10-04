@@ -7,6 +7,7 @@ import { ConfigService } from '@nestjs/config';
 import { StorageService } from '../../storage/storage.service';
 import { Fanfic } from '../models/Fanfic.model';
 import { FanficService } from '../fanfic/fanfic.service';
+import { PaginationDTO } from '../../../common/dto';
 
 @Injectable()
 export class ChapterService {
@@ -60,5 +61,33 @@ export class ChapterService {
          ext: 'txt'
       });
       return { chapter, content: content.toString('utf-8') };
+   }
+
+   async getChapters(fanficID: number, { limit, page }: PaginationDTO) {
+      const offset = (page - 1) * limit;
+
+      const { count, rows: chapters } = await this.chapterModel.findAndCountAll({
+         where: {
+            fanficID
+         },
+         attributes: ['id', 'title', 'createdAt'],
+         order: [['createdAt', 'DESC']],
+         offset,
+         limit
+      });
+
+      const totalPages = Math.ceil(count / limit);
+
+      return {
+         data: chapters.map(chapter => chapter.get({ plain: true })),
+         pagination: {
+            currentPage: page,
+            totalPages,
+            totalItems: count,
+            itemsPerPage: limit,
+            hasNextPage: page < totalPages,
+            hasPrevPage: page > 1
+         }
+      };
    }
 }

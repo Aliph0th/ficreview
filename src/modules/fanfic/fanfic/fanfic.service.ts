@@ -7,6 +7,7 @@ import { StorageService } from '../../storage/storage.service';
 import { User } from '../../user/models/User.model';
 import { CreateFanficDTO } from '../dto';
 import { Fanfic } from '../models/Fanfic.model';
+import { PaginationDTO } from '../../../common/dto';
 
 @Injectable()
 export class FanficService {

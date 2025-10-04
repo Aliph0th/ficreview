@@ -1,18 +1,20 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { InjectModel } from '@nestjs/sequelize';
-import { CommentDTO, CreateCommentDTO, GetCommentsDTO } from '../dto';
 import { ConfigService } from '@nestjs/config';
-import { StorageService } from '../../storage/storage.service';
-import { ChapterService } from '../chapter/chapter.service';
-import { FanficService } from '../fanfic/fanfic.service';
-import { CommentableType } from '../../../common/constants';
+import { InjectModel } from '@nestjs/sequelize';
 import { randomUUID } from 'crypto';
-import { Comment } from '../models/Comment.model';
-import { User } from '../../user/models/User.model';
-import { Fanfic } from '../models/Fanfic.model';
-import { Chapter } from '../models/Chapter.model';
-import { PaginationDTO } from '../../../common/dto';
 import { Includeable } from 'sequelize';
+import { CommentableType } from '../../../common/constants';
+import { PaginationDTO } from '../../../common/dto';
+import { StorageService } from '../../storage/storage.service';
+import { User } from '../../user/models/User.model';
+import { ChapterService } from '../chapter/chapter.service';
+import { CommentDTO, CreateCommentDTO, GetCommentsDTO } from '../dto';
+import { FanficService } from '../fanfic/fanfic.service';
+import { Chapter } from '../models/Chapter.model';
+import { Comment } from '../models/Comment.model';
+import { Fanfic } from '../models/Fanfic.model';
+import { CommentGateway } from './comment.gateway';
+import { instanceToPlain } from 'class-transformer';
 
 @Injectable()
 export class CommentService {
@@ -21,6 +23,7 @@ export class CommentService {
       private readonly storage: StorageService,
       private readonly fanficService: FanficService,
       private readonly chapterService: ChapterService,
+      private readonly commentGateway: CommentGateway,
       private readonly configService: ConfigService
    ) {}
 
@@ -39,13 +42,17 @@ export class CommentService {
          },
          'private'
       );
-      const comment = await this.commentModel.create({
+      const created = await this.commentModel.create({
          contentPath: commentID,
          commentableID: dto.commentableID,
          commentableType: dto.commentableType,
          authorID: userID
       });
-      return await this.getCommentByIDOrThrow(comment.id, dto.commentableType);
+      const { comment, content } = await this.getCommentByIDOrThrow(created.id, dto.commentableType);
+      const commentDto = new CommentDTO(comment.get({ plain: true }), content);
+      const room = `${dto.commentableType}-${dto.commentableID}`;
+      this.commentGateway.emitNewComment(room, instanceToPlain(commentDto));
+      return commentDto;
    }
 
    async getCommentByIDOrThrow(id: number, type?: CommentableType) {
@@ -110,7 +117,6 @@ export class CommentService {
 
    private resolveIncludes(type?: CommentableType) {
       const includes: Includeable[] = [{ model: User, attributes: ['id', 'username', 'role'], as: 'author' }];
-      console.log(type);
       switch (type) {
          case CommentableType.FANFIC:
             includes.push({
