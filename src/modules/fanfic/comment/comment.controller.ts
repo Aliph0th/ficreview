@@ -2,6 +2,7 @@ import {
    Body,
    ClassSerializerInterceptor,
    Controller,
+   Delete,
    Get,
    Param,
    Post,
@@ -38,5 +39,11 @@ export class CommentController {
    @Get(':commentableID/:type')
    async getComments(@Param() params: GetCommentsDTO, @Query() query: PaginationDTO) {
       return this.commentService.getComments(params, query);
+   }
+
+   @Delete(':id')
+   async deleteComment(@Param() { id }: ID, @Req() request: Request) {
+      const deletedID = await this.commentService.deleteComment(id, request.user!.id);
+      return { deleted: true, id: deletedID };
    }
 }

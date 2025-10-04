@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectModel } from '@nestjs/sequelize';
 import { randomUUID } from 'crypto';
@@ -7,7 +7,6 @@ import { StorageService } from '../../storage/storage.service';
 import { User } from '../../user/models/User.model';
 import { CreateFanficDTO } from '../dto';
 import { Fanfic } from '../models/Fanfic.model';
-import { PaginationDTO } from '../../../common/dto';
 
 @Injectable()
 export class FanficService {
@@ -59,5 +58,25 @@ export class FanficService {
          throw new NotFoundException('Fanfic not found');
       }
       return fanfic;
+   }
+
+   async deleteFanfic(id: number, userID: number) {
+      const fanfic = await this.fanficModel.findByPk(id);
+      if (!fanfic) throw new NotFoundException('Fanfic not found');
+
+      if (fanfic.authorID !== userID) {
+         throw new ForbiddenException('You do not have permission to delete this fanfic');
+      }
+
+      if (fanfic.coverPath) {
+         await this.storage.delete({
+            file: fanfic.coverPath,
+            folder: this.configService.getOrThrow<string>('S3_COVERS_FOLDER'),
+            ext: 'webp'
+         });
+      }
+
+      await fanfic.destroy();
+      return id;
    }
 }

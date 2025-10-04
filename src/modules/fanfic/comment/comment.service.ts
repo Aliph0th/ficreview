@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectModel } from '@nestjs/sequelize';
 import { randomUUID } from 'crypto';
@@ -113,6 +113,24 @@ export class CommentService {
             hasPrevPage: page > 1
          }
       };
+   }
+
+   async deleteComment(id: number, userID: number) {
+      const comment = await this.commentModel.findByPk(id);
+      if (!comment) throw new NotFoundException('Comment not found');
+
+      if (comment.authorID !== userID) {
+         throw new ForbiddenException('Comment not found');
+      }
+
+      await this.storage.delete({
+         file: comment.contentPath,
+         folder: this.configService.getOrThrow<string>('S3_COMMENTS_FOLDER'),
+         ext: 'txt'
+      });
+
+      await comment.destroy();
+      return id;
    }
 
    private resolveIncludes(type?: CommentableType) {

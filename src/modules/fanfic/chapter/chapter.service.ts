@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { Chapter } from '../models/Chapter.model';
 import { InjectModel } from '@nestjs/sequelize';
 import { CreateChapterDTO } from '../dto';
@@ -89,5 +89,25 @@ export class ChapterService {
             hasPrevPage: page > 1
          }
       };
+   }
+
+   async deleteChapter(id: number, userID: number) {
+      const chapter = await this.chapterModel.findByPk(id, {
+         include: [{ model: Fanfic, attributes: ['id', 'authorID'] }]
+      });
+      if (!chapter || !chapter.fanfic) throw new NotFoundException('Chapter not found');
+
+      if (chapter.fanfic.authorID !== userID) {
+         throw new ForbiddenException('You do not have permission to delete this chapter');
+      }
+
+      await this.storage.delete({
+         file: chapter.contentPath,
+         folder: this.configService.getOrThrow<string>('S3_CHAPTERS_FOLDER'),
+         ext: 'txt'
+      });
+
+      await chapter.destroy();
+      return id;
    }
 }

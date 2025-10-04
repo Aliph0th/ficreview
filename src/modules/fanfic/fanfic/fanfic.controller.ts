@@ -7,7 +7,8 @@ import {
    ClassSerializerInterceptor,
    UseInterceptors,
    Get,
-   Param
+   Param,
+   Delete
 } from '@nestjs/common';
 import type { Request } from 'express';
 import { CreateFanficDTO, FanficDTO } from '../dto';
@@ -51,5 +52,11 @@ export class FanficController {
    @Get(':id/overview')
    async getChapters(@Param() { id }: ID, pagination: PaginationDTO) {
       return await this.chapterService.getChapters(id, pagination);
+   }
+
+   @Delete(':id')
+   async deleteFanfic(@Param() { id }: ID, @Req() request: Request) {
+      const deletedID = await this.fanficService.deleteFanfic(id, request.user!.id);
+      return { deleted: true, id: deletedID };
    }
 }
