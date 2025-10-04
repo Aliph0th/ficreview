@@ -1,0 +1,15 @@
+node_modules
+dist
+.git
+.gitignore
+Dockerfile
+README.md
+.prettierrc
+docker-compose.yml
+coverage
+*.log
+.vscode
+.idea
+**/*.tsbuildinfo
+.DS_Store
+tmp

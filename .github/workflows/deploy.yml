@@ -1,0 +1,38 @@
+name: CI/CD on self-hosted runner
+
+on:
+   push:
+      branches:
+         - master
+   workflow_dispatch:
+
+jobs:
+   build-and-deploy:
+      runs-on: self-hosted
+      name: Build and Deploy
+      steps:
+         - name: Checkout
+           uses: actions/checkout@v4
+
+         - name: Create .env file
+           shell: bash
+           env:
+              ENVS: ${{ secrets.ENV_FILE }}
+           run: |
+              echo "$ENVS" > .env
+
+         - name: Build and run stack
+           shell: bash
+           run: |
+              docker compose up -d --build --remove-orphans
+
+         - name: Show running services
+           shell: bash
+           run: |
+              docker compose ps
+
+         - name: Remove .env
+           if: always()
+           shell: bash
+           run: |
+              rm .env || true
