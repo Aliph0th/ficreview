@@ -16,6 +16,7 @@
       "baseUrl": "./",
       "incremental": true,
       "skipLibCheck": true,
+      "jsx": "react",
       "strictNullChecks": true,
       "forceConsistentCasingInFileNames": true,
       "noImplicitAny": false,
