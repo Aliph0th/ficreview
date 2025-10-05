@@ -1,42 +1,34 @@
-import {
-   Body,
-   ClassSerializerInterceptor,
-   Controller,
-   Delete,
-   Get,
-   Param,
-   Post,
-   Req,
-   UseInterceptors
-} from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Req } from '@nestjs/common';
 import type { Request } from 'express';
-import { ChapterService } from './chapter.service';
-import { Public, AuthUncompleted } from '../../../common/decorators';
+import { AuthUncompleted, Public } from '../../../common/decorators';
 import { ID } from '../../../common/dto';
-import { ChapterDTO, CreateChapterDTO } from '../dto';
+import { CreateChapterDTO, UpdateChapterDTO } from '../dto';
+import { ChapterService } from './chapter.service';
 
-@UseInterceptors(ClassSerializerInterceptor)
 @Controller('chapters')
 export class ChapterController {
    constructor(private readonly chapterService: ChapterService) {}
 
    @Post()
    async createChapter(@Body() dto: CreateChapterDTO) {
-      const { chapter, content } = await this.chapterService.createChapter(dto);
-      return new ChapterDTO(chapter.get({ plain: true }), content);
+      return await this.chapterService.createChapter(dto);
    }
 
    @Public()
    @AuthUncompleted()
    @Get(':id')
    async getChapterByID(@Param() { id }: ID) {
-      const { chapter, content } = await this.chapterService.getChapterByIDOrThrow(id);
-      return new ChapterDTO(chapter.get({ plain: true }), content);
+      return await this.chapterService.getChapterByIDOrThrow(id);
    }
 
    @Delete(':id')
    async deleteChapter(@Param() { id }: ID, @Req() request: Request) {
       const deletedID = await this.chapterService.deleteChapter(id, request.user!.id);
       return { deleted: true, id: deletedID };
+   }
+
+   @Patch(':id')
+   async updateChapter(@Param() { id }: ID, @Body() dto: UpdateChapterDTO, @Req() request: Request) {
+      return await this.chapterService.updateChapterContent(id, request.user!.id, dto.content);
    }
 }

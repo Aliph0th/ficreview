@@ -10,10 +10,11 @@ import { FanficService } from './fanfic/fanfic.service';
 import { Chapter } from './models/Chapter.model';
 import { Comment } from './models/Comment.model';
 import { Fanfic } from './models/Fanfic.model';
+import { FanficLike } from './models/FanficLike.model';
 import { CommentGateway } from './comment/comment.gateway';
 
 @Module({
-   imports: [SequelizeModule.forFeature([Fanfic, Chapter, Comment]), StorageModule],
+   imports: [SequelizeModule.forFeature([Fanfic, Chapter, Comment, FanficLike]), StorageModule],
    controllers: [FanficController, ChapterController, CommentController],
    providers: [FanficService, ChapterService, CommentService, CommentGateway]
 })

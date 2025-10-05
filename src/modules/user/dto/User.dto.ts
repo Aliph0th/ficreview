@@ -7,7 +7,7 @@ export class UserDTO {
    email: string;
    username: string;
    @Expose()
-   @Transform(({ obj }) => getAvatarUrl(obj.avatarPath))
+   @Transform(({ obj }) => obj.avatar || getAvatarUrl(obj.avatarPath))
    avatar?: string;
    isEmailVerified: boolean;
    role: Role;
