@@ -159,8 +159,7 @@ export class CommentService {
       );
 
       await this.cache.incrVersion(REDIS_KEYS.VER.comment(id));
-      const updatedComment = await this.getCommentByIDOrThrow(id);
-      return updatedComment;
+      return await this.getCommentByIDOrThrow(id);
    }
 
    private async getOwnComment(id: number, userID: number) {

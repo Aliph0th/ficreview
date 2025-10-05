@@ -132,7 +132,13 @@ export class ChapterService {
          'private'
       );
 
-      return await this.getChapterByIDOrThrow(id);
+      await this.cache.incrVersion(REDIS_KEYS.VER.chapter(id));
+      return {
+         url: new URL(
+            `${this.configService.getOrThrow('S3_CHAPTERS_FOLDER')}/${chapter.contentPath}.webp`,
+            this.configService.getOrThrow('S3_CDN')
+         ).toString()
+      };
    }
 
    private async getOwnChapter(id: number, userID: number) {
