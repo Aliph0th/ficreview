@@ -3,16 +3,20 @@ import { InjectModel } from '@nestjs/sequelize';
 import { User } from './models/User.model';
 import { randomUUID } from 'crypto';
 import sharp from 'sharp';
-import { AVATAR_SIZE } from '../../common/constants';
+import { AVATAR_SIZE, CACHE_TTL, REDIS_KEYS } from '../../common/constants';
 import { StorageService } from '../storage/storage.service';
 import { ConfigService } from '@nestjs/config';
+import { CacheService } from '../../core/redis/cache.service';
+import { UserDTO } from './dto';
+import { instanceToPlain } from 'class-transformer';
 
 @Injectable()
 export class UserService {
    constructor(
       @InjectModel(User) private userModel: typeof User,
       private readonly storage: StorageService,
-      private readonly configService: ConfigService
+      private readonly configService: ConfigService,
+      private readonly cache: CacheService
    ) {}
 
    async create({ email, username, password }: Pick<User, 'email' | 'username' | 'password'>) {
@@ -26,15 +30,24 @@ export class UserService {
       return await this.userModel.findByPk(id);
    }
    async findByIDOrThrow(id: number) {
+      const ver = await this.cache.getVersion(REDIS_KEYS.VER.user(id));
+      const key = REDIS_KEYS.CACHE.user(id, ver);
+      const cached = await this.cache.getJson<Record<string, unknown>>(key);
+      if (cached) {
+         return new UserDTO(cached);
+      }
       const user = await this.userModel.findByPk(id);
       if (!user) {
          throw new NotFoundException('User not found');
       }
-      return user;
+      const dto = new UserDTO(user.get({ plain: true }));
+      await this.cache.setJson(key, instanceToPlain(dto), CACHE_TTL.user);
+      return dto;
    }
 
    async setVerifiedEmail(id: number) {
       await this.userModel.update({ isEmailVerified: true }, { where: { id } });
+      await this.cache.incrVersion(REDIS_KEYS.VER.user(id));
    }
 
    async changeAvatar(file: Buffer, userID: number) {
@@ -66,6 +79,7 @@ export class UserService {
       );
 
       await this.userModel.update({ avatarPath: fileID }, { where: { id: userID } });
+      await this.cache.incrVersion(REDIS_KEYS.VER.user(userID));
 
       return {
          url: new URL(`${folder}/${fileID}.webp`, this.configService.getOrThrow('S3_CDN')).toString()
@@ -79,6 +93,7 @@ export class UserService {
       }
       user.username = username;
       await user.save();
-      return user;
+      await this.cache.incrVersion(REDIS_KEYS.VER.user(userID));
+      return new UserDTO(user.get({ plain: true }));
    }
 }

@@ -1,18 +1,17 @@
 import {
+   Body,
    ClassSerializerInterceptor,
    Controller,
    Get,
    Patch,
    Req,
    UploadedFile,
-   UseInterceptors,
-   Body
+   UseInterceptors
 } from '@nestjs/common';
 import type { Request } from 'express';
 import { ACCEPTABLE_AVATAR_TYPES, AVATAR_MAX_FILE_SIZE } from '../../common/constants';
 import { AuthUncompleted, FileInterceptor } from '../../common/decorators';
 import { FileValidationPipe } from '../../common/validators';
-import { UserDTO } from './dto';
 import { UpdateUsernameDTO } from './dto';
 import { UserService } from './user.service';
 
@@ -24,8 +23,7 @@ export class UserController {
    @Get('me')
    @AuthUncompleted()
    async getMe(@Req() req: Request) {
-      const user = await this.userService.findByIDOrThrow(req.user!.id);
-      return new UserDTO(user.get({ plain: true }));
+      return await this.userService.findByIDOrThrow(req.user!.id);
    }
 
    @Patch('avatar')
@@ -40,7 +38,6 @@ export class UserController {
 
    @Patch('username')
    async changeUsername(@Body() dto: UpdateUsernameDTO, @Req() req: Request) {
-      const user = await this.userService.changeUsername(req.user!.id, dto.username);
-      return new UserDTO(user.get({ plain: true }));
+      return await this.userService.changeUsername(req.user!.id, dto.username);
    }
 }

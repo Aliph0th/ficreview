@@ -1,23 +1,10 @@
-import {
-   Body,
-   ClassSerializerInterceptor,
-   Controller,
-   Patch,
-   Delete,
-   Get,
-   Param,
-   Post,
-   Query,
-   Req,
-   UseInterceptors
-} from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Req } from '@nestjs/common';
 import type { Request } from 'express';
-import { CommentDTO, CreateCommentDTO, GetCommentsDTO, UpdateCommentDTO } from '../dto';
-import { CommentService } from './comment.service';
-import { ID, PaginationDTO } from '../../../common/dto';
 import { AuthUncompleted, Public } from '../../../common/decorators';
+import { ID, PaginationDTO } from '../../../common/dto';
+import { CreateCommentDTO, GetCommentsDTO, UpdateCommentDTO } from '../dto';
+import { CommentService } from './comment.service';
 
-@UseInterceptors(ClassSerializerInterceptor)
 @Controller('comments')
 export class CommentController {
    constructor(private readonly commentService: CommentService) {}
@@ -31,8 +18,7 @@ export class CommentController {
    @AuthUncompleted()
    @Get(':id')
    async getCommentByID(@Param() { id }: ID) {
-      const { comment, content } = await this.commentService.getCommentByIDOrThrow(id);
-      return new CommentDTO(comment.get({ plain: true }), content);
+      return await this.commentService.getCommentByIDOrThrow(id);
    }
 
    @Public()
@@ -50,7 +36,6 @@ export class CommentController {
 
    @Patch(':id')
    async updateComment(@Param() { id }: ID, @Body() dto: UpdateCommentDTO, @Req() request: Request) {
-      const updated = await this.commentService.updateCommentContent(id, request.user!.id, dto.content);
-      return new CommentDTO(updated.comment.get({ plain: true }), updated.content);
+      return await this.commentService.updateCommentContent(id, request.user!.id, dto.content);
    }
 }

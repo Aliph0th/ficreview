@@ -17,7 +17,7 @@ export class FanficDTO {
    };
 
    @Expose()
-   @Transform(({ obj }) => getCoverUrl(obj.coverPath))
+   @Transform(({ obj }) => obj.cover || getCoverUrl(obj.coverPath))
    cover: string | null;
    @Transform(({ value }) => (Array.isArray(value) ? value : []))
    pairings: string[];

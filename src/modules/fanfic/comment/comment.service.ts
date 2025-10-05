@@ -3,7 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { InjectModel } from '@nestjs/sequelize';
 import { randomUUID } from 'crypto';
 import { Includeable } from 'sequelize';
-import { CommentableType } from '../../../common/constants';
+import { CACHE_TTL, CommentableType, REDIS_KEYS } from '../../../common/constants';
 import { PaginationDTO } from '../../../common/dto';
 import { StorageService } from '../../storage/storage.service';
 import { User } from '../../user/models/User.model';
@@ -15,6 +15,7 @@ import { Comment } from '../models/Comment.model';
 import { Fanfic } from '../models/Fanfic.model';
 import { CommentGateway } from './comment.gateway';
 import { instanceToPlain } from 'class-transformer';
+import { CacheService } from '../../../core/redis/cache.service';
 
 @Injectable()
 export class CommentService {
@@ -24,7 +25,8 @@ export class CommentService {
       private readonly fanficService: FanficService,
       private readonly chapterService: ChapterService,
       private readonly commentGateway: CommentGateway,
-      private readonly configService: ConfigService
+      private readonly configService: ConfigService,
+      private readonly cache: CacheService
    ) {}
 
    async createComment(dto: CreateCommentDTO, userID: number) {
@@ -48,6 +50,7 @@ export class CommentService {
          commentableType: dto.commentableType,
          authorID: userID
       });
+      await this.cache.incrVersion(REDIS_KEYS.VER.commentsByTarget(dto.commentableType, dto.commentableID));
       const { comment, content } = await this.getCommentByIDOrThrow(created.id, dto.commentableType);
       const commentDto = new CommentDTO(comment.get({ plain: true }), content);
       const room = `${dto.commentableType}-${dto.commentableID}`;
@@ -56,18 +59,23 @@ export class CommentService {
    }
 
    async getCommentByIDOrThrow(id: number, type?: CommentableType) {
-      const comment = await this.commentModel.findByPk(id, {
-         include: this.resolveIncludes(type) //TODO: infer type (?)
+      const ver = await this.cache.getVersion(REDIS_KEYS.VER.comment(id));
+      const key = REDIS_KEYS.CACHE.comment(id, ver);
+      return await this.cache.getOrSetJson(key, CACHE_TTL.comment, async () => {
+         const comment = await this.commentModel.findByPk(id, {
+            include: this.resolveIncludes(type) //TODO: infer type (?)
+         });
+         if (!comment) {
+            throw new NotFoundException('Comment not found');
+         }
+         const content = await this.storage.get({
+            file: comment.contentPath,
+            folder: this.configService.getOrThrow<string>('S3_COMMENTS_FOLDER'),
+            ext: 'txt'
+         });
+         const response = new CommentDTO(comment.get({ plain: true }), content.toString('utf-8'));
+         return instanceToPlain(response);
       });
-      if (!comment) {
-         throw new NotFoundException('Comment not found');
-      }
-      const content = await this.storage.get({
-         file: comment.contentPath,
-         folder: this.configService.getOrThrow<string>('S3_COMMENTS_FOLDER'),
-         ext: 'txt'
-      });
-      return { comment, content: content.toString('utf-8') };
    }
 
    async getComments({ commentableID, type }: GetCommentsDTO, { page, limit }: PaginationDTO) {
@@ -78,41 +86,46 @@ export class CommentService {
 
       const offset = (page - 1) * limit;
 
-      const { count, rows: comments } = await this.commentModel.findAndCountAll({
-         where: {
-            commentableID,
-            commentableType: type
-         },
-         include: this.resolveIncludes(type), //TODO: map objects (exclude commentable)
-         order: [['createdAt', 'DESC']],
-         offset,
-         limit
+      const ver = await this.cache.getVersion(REDIS_KEYS.VER.commentsByTarget(type, commentableID));
+      const key = REDIS_KEYS.CACHE.commentsList(type, commentableID, page, limit, ver);
+      return await this.cache.getOrSetJson(key, CACHE_TTL.commentsList, async () => {
+         const { count, rows: comments } = await this.commentModel.findAndCountAll({
+            where: {
+               commentableID,
+               commentableType: type
+            },
+            include: this.resolveIncludes(type), //TODO: map objects (exclude commentable)
+            order: [['createdAt', 'DESC']],
+            offset,
+            limit
+         });
+
+         const commentsWithContent = await Promise.all(
+            comments.map(async comment => {
+               const content = await this.storage.get({
+                  file: comment.contentPath,
+                  folder: this.configService.getOrThrow<string>('S3_COMMENTS_FOLDER'),
+                  ext: 'txt'
+               });
+               const dto = new CommentDTO(comment.get({ plain: true }), content.toString('utf-8'));
+               return instanceToPlain(dto);
+            })
+         );
+
+         const totalPages = Math.max(0, Math.ceil(count / limit));
+
+         return {
+            data: commentsWithContent,
+            pagination: {
+               currentPage: page,
+               totalPages,
+               totalItems: count,
+               itemsPerPage: limit,
+               hasNextPage: page < totalPages,
+               hasPrevPage: page > 1
+            }
+         };
       });
-
-      const commentsWithContent = await Promise.all(
-         comments.map(async comment => {
-            const content = await this.storage.get({
-               file: comment.contentPath,
-               folder: this.configService.getOrThrow<string>('S3_COMMENTS_FOLDER'),
-               ext: 'txt'
-            });
-            return new CommentDTO(comment.get({ plain: true }), content.toString('utf-8'));
-         })
-      );
-
-      const totalPages = Math.ceil(count / limit);
-
-      return {
-         data: commentsWithContent,
-         pagination: {
-            currentPage: page,
-            totalPages,
-            totalItems: count,
-            itemsPerPage: limit,
-            hasNextPage: page < totalPages,
-            hasPrevPage: page > 1
-         }
-      };
    }
 
    async deleteComment(id: number, userID: number) {
@@ -125,6 +138,10 @@ export class CommentService {
       });
 
       await comment.destroy();
+      await this.cache.incrVersion(
+         REDIS_KEYS.VER.comment(id),
+         REDIS_KEYS.VER.commentsByTarget(comment.commentableType, comment.commentableID)
+      );
       return id;
    }
 
@@ -141,6 +158,7 @@ export class CommentService {
          'private'
       );
 
+      await this.cache.incrVersion(REDIS_KEYS.VER.comment(id));
       const updatedComment = await this.getCommentByIDOrThrow(id);
       return updatedComment;
    }

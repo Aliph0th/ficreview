@@ -10,13 +10,19 @@ import { FanficDTO } from '../dto/Fanfic.dto';
 import { Fanfic } from '../models/Fanfic.model';
 import { GetFanficsDTO } from '../dto/GetFanfics.dto';
 import { FindAndCountOptions, Order } from 'sequelize';
+import { CacheService } from '../../../core/redis/cache.service';
+import { CACHE_TTL, REDIS_KEYS } from '../../../common/constants';
+import { FanficLike } from '../models/FanficLike.model';
+import { instanceToPlain } from 'class-transformer';
 
 @Injectable()
 export class FanficService {
    constructor(
-      @InjectModel(Fanfic) private fanficModel: typeof Fanfic,
+      @InjectModel(Fanfic) private readonly fanficModel: typeof Fanfic,
+      @InjectModel(FanficLike) private readonly fanficLikeModel: typeof FanficLike,
       private readonly storage: StorageService,
-      private readonly configService: ConfigService
+      private readonly configService: ConfigService,
+      private readonly cache: CacheService
    ) {}
 
    async isFanficExists(id: number) {
@@ -49,18 +55,62 @@ export class FanficService {
          tags: dto.tags,
          authorID: userID
       });
-
+      await this.cache.incrVersion(REDIS_KEYS.VER.fanfics());
       return await this.getFanficByIDOrThrow(fanfic.id);
    }
 
    async getFanficByIDOrThrow(id: number) {
+      const ver = await this.cache.getVersion(REDIS_KEYS.VER.fanfic(id));
+      const key = REDIS_KEYS.CACHE.fanfic(id, ver);
+      const cached = await this.cache.getJson<Record<string, unknown>>(key);
+      if (cached) {
+         return new FanficDTO(cached);
+      }
       const fanfic = await this.fanficModel.findByPk(id, {
          include: { model: User, attributes: ['id', 'username', 'role'] }
       });
       if (!fanfic) {
          throw new NotFoundException('Fanfic not found');
       }
-      return fanfic;
+      const dto = new FanficDTO(fanfic.get({ plain: true }));
+      await this.cache.setJson(key, instanceToPlain(dto), CACHE_TTL.fanfic);
+      return dto;
+   }
+
+   async likeFanfic(id: number, userID: number): Promise<{ liked: boolean; likes: number }> {
+      const fanfic = await this.fanficModel.findByPk(id);
+      if (!fanfic) {
+         throw new NotFoundException('Fanfic not found');
+      }
+      await this.fanficLikeModel.create({ fanficID: id, userID });
+      fanfic.likes += 1;
+      await fanfic.save();
+      await this.cache.incrVersion(REDIS_KEYS.VER.fanfic(id));
+      return { liked: true, likes: fanfic.likes };
+   }
+
+   async unlikeFanfic(id: number, userID: number): Promise<{ liked: boolean; likes: number }> {
+      const fanfic = await this.fanficModel.findByPk(id);
+      if (!fanfic) {
+         throw new NotFoundException('Fanfic not found');
+      }
+
+      const removed = await this.fanficLikeModel.destroy({ where: { fanficID: id, userID } });
+      fanfic.likes = Math.max(0, fanfic.likes - removed);
+      await fanfic.save();
+      await this.cache.incrVersion(REDIS_KEYS.VER.fanfic(id));
+      return { liked: false, likes: fanfic.likes };
+   }
+
+   async toggleLike(fanficID: number, userID: number) {
+      const exists = await this.fanficLikeModel.findOne({ where: { fanficID, userID } });
+      let result: { liked: boolean; likes: number };
+      if (exists) {
+         result = await this.unlikeFanfic(fanficID, userID);
+      } else {
+         result = await this.likeFanfic(fanficID, userID);
+      }
+      return { ...result, fanficID };
    }
 
    async getFanfics({ page, limit, sort }: GetFanficsDTO) {
@@ -75,21 +125,26 @@ export class FanficService {
          offset,
          limit
       };
-
-      const { count, rows } = await this.fanficModel.findAndCountAll(options);
-      const totalPages = Math.ceil(count / limit);
-
-      return {
-         data: rows.map(f => new FanficDTO(f.get({ plain: true }))),
-         pagination: {
-            currentPage: page,
-            totalPages,
-            totalItems: count,
-            itemsPerPage: limit,
-            hasNextPage: page < totalPages,
-            hasPrevPage: page > 1
-         }
-      };
+      const ver = await this.cache.getVersion(REDIS_KEYS.VER.fanfics());
+      const key = REDIS_KEYS.CACHE.fanficsList(page, limit, sort, ver);
+      return await this.cache.getOrSetJson(key, CACHE_TTL.fanficsList, async () => {
+         const { count, rows } = await this.fanficModel.findAndCountAll(options);
+         const totalPages = Math.max(0, Math.ceil(count / limit));
+         return {
+            data: rows.map(f => {
+               const dto = new FanficDTO(f.get({ plain: true }));
+               return instanceToPlain(dto);
+            }),
+            pagination: {
+               currentPage: page,
+               totalPages,
+               totalItems: count,
+               itemsPerPage: limit,
+               hasNextPage: page < totalPages,
+               hasPrevPage: page > 1
+            }
+         };
+      });
    }
 
    async deleteFanfic(id: number, userID: number) {
@@ -109,6 +164,7 @@ export class FanficService {
       }
 
       await fanfic.destroy();
+      await this.cache.incrVersion(REDIS_KEYS.VER.fanfics());
       return id;
    }
 
@@ -141,6 +197,7 @@ export class FanficService {
 
       fanfic.coverPath = fileID;
       await fanfic.save();
+      await this.cache.incrVersion(REDIS_KEYS.VER.fanfic(id), REDIS_KEYS.VER.fanfics());
       return await this.getFanficByIDOrThrow(id);
    }
 }

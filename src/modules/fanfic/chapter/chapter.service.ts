@@ -1,13 +1,16 @@
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { Chapter } from '../models/Chapter.model';
 import { InjectModel } from '@nestjs/sequelize';
-import { CreateChapterDTO } from '../dto';
+import { ChapterDTO, CreateChapterDTO } from '../dto';
 import { randomUUID } from 'crypto';
 import { ConfigService } from '@nestjs/config';
 import { StorageService } from '../../storage/storage.service';
 import { Fanfic } from '../models/Fanfic.model';
 import { FanficService } from '../fanfic/fanfic.service';
 import { PaginationDTO } from '../../../common/dto';
+import { CacheService } from '../../../core/redis/cache.service';
+import { CACHE_TTL, REDIS_KEYS } from '../../../common/constants';
+import { instanceToPlain } from 'class-transformer';
 
 @Injectable()
 export class ChapterService {
@@ -15,7 +18,8 @@ export class ChapterService {
       @InjectModel(Chapter) private chapterModel: typeof Chapter,
       private readonly storage: StorageService,
       private readonly fanficService: FanficService,
-      private readonly configService: ConfigService
+      private readonly configService: ConfigService,
+      private readonly cache: CacheService
    ) {}
 
    async isChapterExists(id: number) {
@@ -44,51 +48,58 @@ export class ChapterService {
          contentPath: chapterID,
          fanficID: dto.fanficID
       });
-
+      await this.cache.incrVersion(
+         REDIS_KEYS.VER.chapter(chapter.id),
+         REDIS_KEYS.VER.chaptersByFanfic(dto.fanficID)
+      );
       return await this.getChapterByIDOrThrow(chapter.id);
    }
 
    async getChapterByIDOrThrow(id: number) {
-      const chapter = await this.chapterModel.findByPk(id, {
-         include: { model: Fanfic, attributes: ['id', 'title', 'likes'] }
+      const ver = await this.cache.getVersion(REDIS_KEYS.VER.chapter(id));
+      const key = REDIS_KEYS.CACHE.chapter(id, ver);
+      return await this.cache.getOrSetJson(key, CACHE_TTL.chapter, async () => {
+         const chapter = await this.chapterModel.findByPk(id, {
+            include: { model: Fanfic, attributes: ['id', 'title', 'likes'] }
+         });
+         if (!chapter) {
+            throw new NotFoundException('Chapter not found');
+         }
+         const content = await this.storage.get({
+            file: chapter.contentPath,
+            folder: this.configService.getOrThrow<string>('S3_CHAPTERS_FOLDER'),
+            ext: 'txt'
+         });
+         const response = new ChapterDTO(chapter.get({ plain: true }), content.toString('utf-8'));
+         return instanceToPlain(response);
       });
-      if (!chapter) {
-         throw new NotFoundException('Chapter not found');
-      }
-      const content = await this.storage.get({
-         file: chapter.contentPath,
-         folder: this.configService.getOrThrow<string>('S3_CHAPTERS_FOLDER'),
-         ext: 'txt'
-      });
-      return { chapter, content: content.toString('utf-8') };
    }
 
    async getChapters(fanficID: number, { limit, page }: PaginationDTO) {
       const offset = (page - 1) * limit;
-
-      const { count, rows: chapters } = await this.chapterModel.findAndCountAll({
-         where: {
-            fanficID
-         },
-         attributes: ['id', 'title', 'createdAt'],
-         order: [['createdAt', 'DESC']],
-         offset,
-         limit
+      const ver = await this.cache.getVersion(REDIS_KEYS.VER.chaptersByFanfic(fanficID));
+      const key = REDIS_KEYS.CACHE.chaptersOverview(fanficID, page, limit, ver);
+      return await this.cache.getOrSetJson(key, CACHE_TTL.chaptersOverview, async () => {
+         const { count, rows: chapters } = await this.chapterModel.findAndCountAll({
+            where: { fanficID },
+            attributes: ['id', 'title', 'createdAt'],
+            order: [['createdAt', 'DESC']],
+            offset,
+            limit
+         });
+         const totalPages = Math.max(0, Math.ceil(count / limit));
+         return {
+            data: chapters.map(chapter => chapter.get({ plain: true })),
+            pagination: {
+               currentPage: page,
+               totalPages,
+               totalItems: count,
+               itemsPerPage: limit,
+               hasNextPage: page < totalPages,
+               hasPrevPage: page > 1
+            }
+         };
       });
-
-      const totalPages = Math.ceil(count / limit);
-
-      return {
-         data: chapters.map(chapter => chapter.get({ plain: true })),
-         pagination: {
-            currentPage: page,
-            totalPages,
-            totalItems: count,
-            itemsPerPage: limit,
-            hasNextPage: page < totalPages,
-            hasPrevPage: page > 1
-         }
-      };
    }
 
    async deleteChapter(id: number, userID: number) {
@@ -101,6 +112,10 @@ export class ChapterService {
       });
 
       await chapter.destroy();
+      await this.cache.incrVersion(
+         REDIS_KEYS.VER.chapter(id),
+         REDIS_KEYS.VER.chaptersByFanfic(chapter.fanficID)
+      );
       return id;
    }
 
@@ -117,8 +132,7 @@ export class ChapterService {
          'private'
       );
 
-      const updatedChapter = await this.getChapterByIDOrThrow(id);
-      return updatedChapter;
+      return await this.getChapterByIDOrThrow(id);
    }
 
    private async getOwnChapter(id: number, userID: number) {
