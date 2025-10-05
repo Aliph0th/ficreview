@@ -112,7 +112,7 @@ export class CommentService {
             })
          );
 
-         const totalPages = Math.max(0, Math.ceil(count / limit));
+         const totalPages = Math.max(1, Math.ceil(count / limit));
 
          return {
             data: commentsWithContent,

@@ -1,4 +1,3 @@
-export * from './session.types';
 export * from './api.types';
 
 export type StorageOptions = {

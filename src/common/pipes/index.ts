@@ -1,1 +1,1 @@
-export * from './ws-json-parse.pipe';
+export * from './wsJsonParse.pipe';
