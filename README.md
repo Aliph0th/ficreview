@@ -16,6 +16,7 @@ FicReview is a NestJS-based backend for a fanfiction platform: user auth, fanfic
 - Pagination DTOs, validation pipes, and transformation via class-transformer
 - PostgreSQL via Sequelize (sequelize-typescript), migrations via Umzug
 - Docker: Postgres, Redis, dockerized app and migrator service
+- Prometheus metrics (custom and via middleware)
 
 ## Tech Stack
 

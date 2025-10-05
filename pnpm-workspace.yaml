@@ -1,4 +1,5 @@
 onlyBuiltDependencies:
   - '@nestjs/core'
+  - gc-stats
   - sharp
   - unrs-resolver
