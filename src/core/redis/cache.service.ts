@@ -7,7 +7,9 @@ export class CacheService {
 
    async getJson<T>(key: string): Promise<T | null> {
       const val = await this.redis.get(key);
-      if (!val) return null;
+      if (!val) {
+         return null;
+      }
       try {
          return JSON.parse(val) as T;
       } catch {
@@ -26,7 +28,9 @@ export class CacheService {
 
    async getOrSetJson<T>(key: string, ttl: number, callback: () => Promise<T>): Promise<T> {
       const cached = await this.getJson<T>(key);
-      if (cached !== null) return cached;
+      if (cached !== null) {
+         return cached;
+      }
       const data = await callback();
       await this.setJson(key, data, ttl);
       return data;

@@ -129,7 +129,7 @@ export class FanficService {
       const key = REDIS_KEYS.CACHE.fanficsList(page, limit, sort, ver);
       return await this.cache.getOrSetJson(key, CACHE_TTL.fanficsList, async () => {
          const { count, rows } = await this.fanficModel.findAndCountAll(options);
-         const totalPages = Math.max(0, Math.ceil(count / limit));
+         const totalPages = Math.max(1, Math.ceil(count / limit));
          return {
             data: rows.map(f => {
                const dto = new FanficDTO(f.get({ plain: true }));
